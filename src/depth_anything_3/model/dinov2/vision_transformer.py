@@ -345,7 +345,12 @@ class DinoVisionTransformer(nn.Module):
                     out_x = restore_original_order(out_x, b_idx)
                 output.append((out_x[:, :, 0], out_x))
             if i in export_feat_layers:
-                aux_output.append(x)
+                # Export same concatenated local+global tokens as blocks_to_take,
+                # so aux features match what the floor seg head was trained on.
+                out_aux = torch.cat([local_x, x], dim=-1) if self.cat_token else x
+                if x.shape[1] >= THRESH_FOR_REF_SELECTION and self.alt_start != -1 and 'b_idx' in locals():
+                    out_aux = restore_original_order(out_aux, b_idx)
+                aux_output.append(out_aux)
         return output, aux_output
 
     def process_attention(self, x, block, attn_type="global", pos=None, attn_mask=None):
@@ -392,9 +397,17 @@ class DinoVisionTransformer(nn.Module):
             ]
         else:
             raise ValueError(f"Invalid output shape: {outputs[0][1].shape}")
-        aux_outputs = [self.norm(out) for out in aux_outputs]
+        # Normalise aux outputs — may be embed_dim or 2*embed_dim (cat_token case).
+        normed_aux = []
+        for out in aux_outputs:
+            if out.shape[-1] == self.embed_dim:
+                normed_aux.append(self.norm(out))
+            else:  # 2 * embed_dim
+                normed_aux.append(torch.cat(
+                    [out[..., :self.embed_dim], self.norm(out[..., self.embed_dim:])], dim=-1
+                ))
         outputs = [out[..., 1 + self.num_register_tokens :, :] for out in outputs]
-        aux_outputs = [out[..., 1 + self.num_register_tokens :, :] for out in aux_outputs]
+        aux_outputs = [out[..., 1 + self.num_register_tokens :, :] for out in normed_aux]
         return tuple(zip(outputs, camera_tokens)), aux_outputs
 
 

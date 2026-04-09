@@ -23,6 +23,13 @@ FILTER*/
 input_images*/
 *.gradio/
 
+ablation_floor_seg/
+ablation_floor_seg_giant_not11
+best.pt
+checkpoints/
+out/
+runs/
+
 # Jupyter notebooks
 .ipynb_checkpoints
 
