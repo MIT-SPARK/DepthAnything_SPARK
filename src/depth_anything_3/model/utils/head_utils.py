@@ -134,9 +134,13 @@ def make_sincos_pos_embed(embed_dim: int, pos: torch.Tensor, omega_0: float = 10
     assert embed_dim % 2 == 0
     omega = torch.arange(embed_dim // 2, dtype=torch.float32, device=pos.device)
     omega /= embed_dim / 2.0
-    omega = 1.0 / omega_0**omega  # (D/2,)
+    # Use a fp32 tensor for omega_0 so ** stays in fp32 throughout.
+    # A Python float (float64) would promote the fp32 tensor to fp64,
+    # creating an invalid mixed-type ONNX Einsum node.
+    omega_0_t = torch.tensor(omega_0, dtype=torch.float32, device=pos.device)
+    omega = 1.0 / omega_0_t.pow(omega)  # (D/2,)
 
-    pos = pos.reshape(-1)  # (M,)
+    pos = pos.reshape(-1).float()  # (M,), ensure fp32
     out = torch.einsum("m,d->md", pos, omega)  # (M, D/2), outer product
 
     emb_sin = torch.sin(out)  # (M, D/2)
