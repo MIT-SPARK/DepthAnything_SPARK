@@ -743,7 +743,7 @@ def parse_args():
     )
     parser.add_argument("--dataset_root", type=str,
                         default="/home/dominic/Documents/floor_label/floor_dataset")
-    parser.add_argument("--da_model", type=str, default="depth-anything/DA3-LARGE-1.1")
+    parser.add_argument("--da_model", type=str, default="depth-anything/DA3NESTED-GIANT-LARGE-1.1")
     parser.add_argument("--layer_stride", type=int, default=1,
                         help="Test every Nth layer. Use 2 to halve runtime.")
     parser.add_argument("--layers", type=int, nargs="+", default=None,

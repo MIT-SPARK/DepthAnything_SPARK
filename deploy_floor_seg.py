@@ -13,8 +13,9 @@ Usage:
         --n 4
 
 Output per batch:
-    <out_dir>/batch_0000.png  — side-by-side grid: original | overlay | heatmap
-    <out_dir>/individual/<stem>_overlay.png  — per-image overlay (with --save_individual)
+    <out_dir>/batch_0000.png               — side-by-side grid: original | overlay | heatmap
+    <out_dir>/segmented/<stem>_seg.png     — per-image floor overlay (always saved)
+    <out_dir>/individual/<stem>_overlay.png — per-image overlay (with --save_individual)
 """
 
 import argparse
@@ -189,6 +190,19 @@ def overlay_mask(image_np: np.ndarray, prob_map: np.ndarray,
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
+def save_segmented_image(blended: np.ndarray, out_path):
+    """Save a single overlay image with a 'Ground' legend."""
+    fig, ax = plt.subplots(figsize=(blended.shape[1] / 100, blended.shape[0] / 100))
+    ax.imshow(blended)
+    patch = mpatches.Patch(color=OVERLAY_COLOR / 255, label="Ground")
+    ax.legend(handles=[patch], loc="lower right", fontsize=50,
+              handlelength=2.5, handleheight=2.0)
+    ax.axis("off")
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    fig.savefig(out_path, dpi=100, bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
+
+
 def make_batch_figure(image_paths, orig_images, prob_maps, threshold, alpha, batch_idx):
     n = len(image_paths)
     fig, axes = plt.subplots(n, 3, figsize=(15, 4.5 * n))
@@ -247,7 +261,7 @@ def parse_args():
                         help="Frames to advance between batches (default: same as --n)")
     parser.add_argument("--img_size", type=int, default=518,
                         help="Image size fed to the model")
-    parser.add_argument("--threshold", type=float, default=0.5,
+    parser.add_argument("--threshold", type=float, default=0.85,
                         help="Sigmoid threshold for binary floor mask")
     parser.add_argument("--alpha", type=float, default=0.45,
                         help="Overlay opacity (0=transparent, 1=solid)")
@@ -269,6 +283,8 @@ def main():
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    seg_dir = out_dir / "segmented"
+    seg_dir.mkdir(exist_ok=True)
     if args.save_individual:
         (out_dir / "individual").mkdir(exist_ok=True)
 
@@ -307,8 +323,14 @@ def main():
         plt.close(fig)
         print(f"    Saved {batch_path}")
 
+        real_count = len(all_paths[start: start + args.n])
+        for i in range(real_count):
+            blended = overlay_mask(orig_images[i], prob_maps[i], args.threshold, args.alpha)
+            seg_path = seg_dir / f"{batch_paths[i].stem}_seg.png"
+            save_segmented_image(blended, seg_path)
+        print(f"    Saved {real_count} segmented image(s) to {seg_dir}/")
+
         if args.save_individual:
-            real_count = args.n - (args.n - len(all_paths[start: start + args.n]))
             for i in range(real_count):
                 blended = overlay_mask(orig_images[i], prob_maps[i], args.threshold, args.alpha)
                 stem = batch_paths[i].stem

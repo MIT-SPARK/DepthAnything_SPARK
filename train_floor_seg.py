@@ -134,7 +134,7 @@ def bce_dice_loss(
 # Metrics
 # ---------------------------------------------------------------------------
 
-def compute_iou_dice(logits: torch.Tensor, targets: torch.Tensor, threshold: float = 0.5):
+def compute_iou_dice(logits: torch.Tensor, targets: torch.Tensor, threshold: float = 0.85):
     preds = (torch.sigmoid(logits) >= threshold).float()
     targets = targets.float()
 
