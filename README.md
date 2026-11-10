@@ -17,6 +17,16 @@
 
 </div>
 
+## Spark Intructions
+
+### Training Ground Segmentation head
+
+  To train on all layers:
+  `python3 train_floor_seg_ablation.py --dataset_root /home/dominic/Documents/floor_label/floor_dataset  --da_model depth-anything/DA3-GIANT --epochs 50`
+
+  To test a specific set of layers:
+  `python3 train_floor_seg_ablation.py --layers 10 15 20 25 30 35`
+
 This work presents **Depth Anything 3 (DA3)**, a model that predicts spatially consistent geometry from
 arbitrary visual inputs, with or without known camera poses.
 In pursuit of minimal modeling, DA3 yields two key insights:
